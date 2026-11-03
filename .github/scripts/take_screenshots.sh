@@ -32,9 +32,19 @@ run_pass() {   # $1 = light | dark
   adb shell input swipe 540 1700 540 700 400
   shot "${mode}_02_home_scrolled" 4
 
-  # open the first video in the list
-  $TAP 'itemThumbnailView' --id || $TAP 'itemVideoTitleView' --id
-  shot "${mode}_03_watch_page" 15
+  # open a video; YouTube sometimes blocks the CI IP for a stream, then try the next one
+  for idx in 0 1 2 3; do
+    $TAP 'itemVideoTitleView' --id --index $idx || break
+    sleep 15
+    adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1
+    if adb shell cat /sdcard/ui.xml | grep -qi 'IP is blocked\|RETRY'; then
+      adb shell input keyevent KEYCODE_BACK; sleep 2
+      adb shell input keyevent KEYCODE_BACK; sleep 3
+      continue
+    fi
+    break
+  done
+  shot "${mode}_03_watch_page" 2
   adb shell input swipe 540 1800 540 900 400
   shot "${mode}_04_watch_page_scrolled" 4
   adb shell input keyevent KEYCODE_BACK
@@ -42,16 +52,19 @@ run_pass() {   # $1 = light | dark
   shot "${mode}_05_mini_player" 3
 
   # other bottom tabs
-  $TAP 'Subscriptions' && shot "${mode}_06_tab2" 6
-  $TAP 'Bookmark|Playlists|Library|You' && shot "${mode}_07_tab3" 6
+  $TAP '^Subscriptions$' && shot "${mode}_06_subscriptions" 6
+  $TAP '^Channels$' && shot "${mode}_07_channels" 6
+  $TAP '^Library$' && shot "${mode}_08_library" 6
+  $TAP '^Home$' && sleep 3
 
   # search
   $TAP '^Search$' && sleep 3 && adb shell input text 'lofi' && adb shell input keyevent KEYCODE_ENTER
-  shot "${mode}_08_search_results" 12
-  # drawer
+  shot "${mode}_09_search_results" 12
   adb shell input keyevent KEYCODE_BACK; sleep 2
   adb shell input keyevent KEYCODE_BACK; sleep 2
-  $TAP 'Open drawer|navigation drawer|Navigate up' && shot "${mode}_09_drawer" 3
+
+  # drawer, opened from the account icon
+  $TAP '^Menu$' && shot "${mode}_10_drawer" 3
   adb shell input keyevent KEYCODE_BACK
 }
 
