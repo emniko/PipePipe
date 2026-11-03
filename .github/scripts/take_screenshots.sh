@@ -9,15 +9,17 @@ mkdir -p "$OUT"
 
 shot() {
   sleep "${2:-3}"
+  dismiss_dialogs
   adb exec-out screencap -p > "$OUT/$1.png"
   adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1
   adb shell cat /sdcard/ui.xml > "$OUT/$1.xml"
 }
 
 dismiss_dialogs() {
-  for _ in 1 2 3 4; do
-    $TAP '^(no|ok|cancel|not now|close)$' || break
-    sleep 2
+  # app dialogs (What's new, announcement, donation) and system "isn't responding" dialogs
+  for _ in 1 2 3 4 5 6; do
+    $TAP '^(no|ok|cancel|not now|wait)$' || break
+    sleep 1
   done
 }
 
@@ -67,6 +69,11 @@ run_pass() {   # $1 = light | dark
   $TAP '^Menu$' && shot "${mode}_10_drawer" 3
   adb shell input keyevent KEYCODE_BACK
 }
+
+# let the launcher settle so it doesn't show "isn't responding" over the app
+adb shell input keyevent KEYCODE_HOME
+sleep 30
+dismiss_dialogs
 
 adb install -r -g "$(ls PipePipeClient/app/build/outputs/apk/debug/*x86_64*.apk | head -1)"
 adb shell pm grant $PKG android.permission.POST_NOTIFICATIONS || true
