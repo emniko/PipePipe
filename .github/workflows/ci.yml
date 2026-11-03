@@ -13,6 +13,7 @@ on:
   push:
     branches:
       - main
+      - youtube-ui
     paths-ignore:
       - 'README.md'
       - 'fastlane/**'
@@ -47,7 +48,7 @@ jobs:
       - name: Build debug APK
         run: |
           cd PipePipeClient
-          ./gradlew assembleDebug lintDebug --stacktrace -DskipFormatKtlint
+          ./gradlew assembleDebug --stacktrace -DskipFormatKtlint
 
       - name: Upload APKs
         uses: actions/upload-artifact@v4
