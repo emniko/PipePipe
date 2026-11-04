@@ -87,7 +87,44 @@ adb shell settings put global transition_animation_scale 0
 adb shell settings put global animator_duration_scale 0
 adb logcat -c
 
+shorts_and_rotation() {
+  adb shell am force-stop $PKG
+  adb shell cmd uimode night no
+  adb shell am start -W -n $PKG/org.schabi.newpipe.MainActivity
+  sleep 12
+  dismiss_dialogs
+
+  # Shorts: tiles in search results, then the swipe player
+  $TAP '^Search$' && sleep 3 && adb shell input text 'funny%scat%sshorts' \
+    && adb shell input keyevent KEYCODE_ENTER
+  shot "shorts_01_search_tiles" 12
+  adb shell input swipe 540 1700 540 900 400
+  shot "shorts_02_search_tiles_scrolled" 4
+  if $TAP 'itemScrim' --id; then
+    shot "shorts_03_player" 15
+    adb shell input swipe 540 1600 540 400 250
+    shot "shorts_04_player_next" 15
+    adb shell input tap 540 1000
+    shot "shorts_05_player_paused" 2
+    adb shell input keyevent KEYCODE_BACK; sleep 3
+  fi
+  adb shell input keyevent KEYCODE_BACK; sleep 2
+  adb shell input keyevent KEYCODE_BACK; sleep 2
+
+  # Rotation: open a video, turn the device with auto-rotate on and then off
+  $TAP '^Home$'; sleep 3
+  $TAP 'itemVideoTitleView' --id
+  shot "rot_01_portrait" 20
+  adb shell settings put system accelerometer_rotation 1
+  adb emu rotate; shot "rot_02_autorotate_on_landscape" 8
+  adb emu rotate; adb emu rotate; adb emu rotate; shot "rot_03_autorotate_on_back" 8
+  adb shell settings put system accelerometer_rotation 0
+  adb emu rotate; shot "rot_04_autorotate_off_landscape" 8
+  adb emu rotate; adb emu rotate; adb emu rotate; shot "rot_05_autorotate_off_back" 8
+}
+
 run_pass light
+shorts_and_rotation
 run_pass dark
 
 adb logcat -d > "$OUT/logcat.txt"
