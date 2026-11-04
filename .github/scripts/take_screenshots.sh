@@ -95,8 +95,13 @@ shorts_and_rotation() {
   dismiss_dialogs
 
   # Shorts: tiles in search results, then the swipe player
-  $TAP '^Search$' && sleep 3 && adb shell input text 'funny%scat%sshorts' \
-    && adb shell input keyevent KEYCODE_ENTER
+  for _ in 1 2 3; do
+    $TAP '^Search$' && break
+    sleep 3; dismiss_dialogs
+  done
+  sleep 3
+  adb shell input text 'funny%scat%sshorts'
+  adb shell input keyevent KEYCODE_ENTER
   shot "shorts_01_search_tiles" 12
   adb shell input swipe 540 1700 540 900 400
   shot "shorts_02_search_tiles_scrolled" 4
@@ -111,16 +116,37 @@ shorts_and_rotation() {
   adb shell input keyevent KEYCODE_BACK; sleep 2
   adb shell input keyevent KEYCODE_BACK; sleep 2
 
-  # Rotation: open a video, turn the device with auto-rotate on and then off
-  $TAP '^Home$'; sleep 3
+  # Rotation: YouTube refuses to play on CI machines, so use media.ccc.de videos for this.
+  # Open a video, then turn the device with auto-rotate on and then off.
+  set_service 'media.ccc.de'
+  adb shell am start -W -n $PKG/org.schabi.newpipe.MainActivity
+  sleep 12
+  dismiss_dialogs
+  shot "rot_00_ccc_home" 3
   $TAP 'itemVideoTitleView' --id
-  shot "rot_01_portrait" 20
+  sleep 8
+  $TAP 'detail_thumbnail_root_layout|detail_thumbnail_play_button' --id
+  shot "rot_01_portrait" 15
   adb shell settings put system accelerometer_rotation 1
   adb emu rotate; shot "rot_02_autorotate_on_landscape" 8
   adb emu rotate; adb emu rotate; adb emu rotate; shot "rot_03_autorotate_on_back" 8
   adb shell settings put system accelerometer_rotation 0
   adb emu rotate; shot "rot_04_autorotate_off_landscape" 8
   adb emu rotate; adb emu rotate; adb emu rotate; shot "rot_05_autorotate_off_back" 8
+  adb shell settings put system accelerometer_rotation 1
+  set_service ''
+}
+
+# Selects the service the app starts with ('' = default, YouTube); edits the app's settings
+# directly, which works because the debug build is debuggable.
+set_service() {
+  adb shell am force-stop $PKG
+  local prefs="shared_prefs/${PKG}_preferences.xml"
+  adb shell "run-as $PKG sed -i '/<string name=\"service\">/d' $prefs"
+  if [ -n "$1" ]; then
+    adb shell "run-as $PKG sed -i 's#</map>#<string name=\"service\">$1</string></map>#' $prefs"
+  fi
+  adb shell "run-as $PKG grep service $prefs" || true
 }
 
 run_pass light
