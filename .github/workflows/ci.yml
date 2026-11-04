@@ -20,6 +20,9 @@ on:
       - 'assets/**'
       - '.github/**'
 
+permissions:
+  contents: write
+
 jobs:
   build-client:
     runs-on: ubuntu-latest
@@ -45,10 +48,28 @@ jobs:
           distribution: "temurin"
           cache: 'gradle'
 
+      - name: Use the fork's fixed signing key
+        run: mkdir -p ~/.android && cp .github/signing/debug.keystore ~/.android/debug.keystore
+
       - name: Build debug APK
+        env:
+          YT_BUILD_NUMBER: ${{ github.run_number }}
         run: |
           cd PipePipeClient
           ./gradlew assembleDebug --stacktrace -DskipFormatKtlint
+
+      - name: Publish the build as a release for the in-app updater
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/youtube-ui'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "yt-build-${{ github.run_number }}" \
+            PipePipeClient/app/build/outputs/apk/debug/*.apk \
+            --repo "${{ github.repository }}" \
+            --target "${{ github.sha }}" \
+            --title "PipePipe YouTube UI build ${{ github.run_number }}" \
+            --notes "Built from ${{ github.sha }}. Pick the arm64-v8a APK for most phones." \
+            --latest
 
       - name: Upload APKs
         uses: actions/upload-artifact@v4
