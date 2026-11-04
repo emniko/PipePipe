@@ -62,6 +62,11 @@ run_pass() {   # $1 = light | dark
   # search
   $TAP '^Search$' && sleep 3 && adb shell input text 'lofi' && adb shell input keyevent KEYCODE_ENTER
   shot "${mode}_09_search_results" 12
+  # a regular (not live) video from the results
+  $TAP 'itemVideoTitleView' --id --index 1 && shot "${mode}_09b_watch_page_video" 15
+  adb shell input swipe 540 1800 540 900 400
+  shot "${mode}_09c_watch_page_video_scrolled" 4
+  adb shell input keyevent KEYCODE_BACK; sleep 2
   adb shell input keyevent KEYCODE_BACK; sleep 2
   adb shell input keyevent KEYCODE_BACK; sleep 2
 
